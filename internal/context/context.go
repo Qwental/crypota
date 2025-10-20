@@ -9,17 +9,25 @@ import (
 	"github.com/Qwental/crypota/internal/padding"
 )
 
-
 type CipherResult struct {
 	Data []byte
 	Err  error
 }
 
-// контекст выполнения симметричного алгоритма
 type CipherContext struct {
 	cipher      interfaces.BlockCipher
 	mode        modes.Mode
 	paddingMode padding.PaddingMode
+	cipherMode  modes.CipherMode
+}
+
+func isStreamMode(m modes.CipherMode) bool {
+	switch m {
+	case modes.CFB, modes.OFB, modes.CTR:
+		return true
+	default:
+		return false
+	}
 }
 
 func NewCipherContext(
@@ -77,19 +85,22 @@ func NewCipherContext(
 		cipher:      cipher,
 		mode:        mode,
 		paddingMode: paddingMode,
+		cipherMode:  cipherMode,
 	}, nil
 }
 
-//  шифрует данные
 func (ctx *CipherContext) Encrypt(plaintext []byte) ([]byte, error) {
-	// Добавляем padding
-	padded, err := padding.Pad(plaintext, ctx.cipher.BlockSize(), ctx.paddingMode)
-	if err != nil {
-		return nil, fmt.Errorf("padding failed: %w", err)
+	dataToEncrypt := plaintext
+	var err error
+
+	if !isStreamMode(ctx.cipherMode) {
+		dataToEncrypt, err = padding.Pad(plaintext, ctx.cipher.BlockSize(), ctx.paddingMode)
+		if err != nil {
+			return nil, fmt.Errorf("padding failed: %w", err)
+		}
 	}
 
-	// Шифруем
-	ciphertext, err := ctx.mode.Encrypt(ctx.cipher, padded)
+	ciphertext, err := ctx.mode.Encrypt(ctx.cipher, dataToEncrypt)
 	if err != nil {
 		return nil, fmt.Errorf("encryption failed: %w", err)
 	}
@@ -97,22 +108,23 @@ func (ctx *CipherContext) Encrypt(plaintext []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-//  дешифрует данные
 func (ctx *CipherContext) Decrypt(ciphertext []byte) ([]byte, error) {
-	padded, err := ctx.mode.Decrypt(ctx.cipher, ciphertext)
+	decryptedData, err := ctx.mode.Decrypt(ctx.cipher, ciphertext)
 	if err != nil {
 		return nil, fmt.Errorf("decryption failed: %w", err)
 	}
 
-	plaintext, err := padding.Unpad(padded, ctx.paddingMode)
-	if err != nil {
-		return nil, fmt.Errorf("unpadding failed: %w", err)
+	if !isStreamMode(ctx.cipherMode) {
+		plaintext, err := padding.Unpad(decryptedData, ctx.paddingMode)
+		if err != nil {
+			return nil, fmt.Errorf("unpadding failed: %w", err)
+		}
+		return plaintext, nil
 	}
 
-	return plaintext, nil
+	return decryptedData, nil
 }
 
-// шифрует данные асинхронно
 func (ctx *CipherContext) EncryptAsync(plaintext []byte) <-chan CipherResult {
 	resultChan := make(chan CipherResult, 1)
 	go func() {
@@ -123,7 +135,6 @@ func (ctx *CipherContext) EncryptAsync(plaintext []byte) <-chan CipherResult {
 	return resultChan
 }
 
-// дешифрует данные асинхронно
 func (ctx *CipherContext) DecryptAsync(ciphertext []byte) <-chan CipherResult {
 	resultChan := make(chan CipherResult, 1)
 	go func() {
@@ -134,46 +145,36 @@ func (ctx *CipherContext) DecryptAsync(ciphertext []byte) <-chan CipherResult {
 	return resultChan
 }
 
-// шифрует файл 
 func (ctx *CipherContext) EncryptFile(inputPath, outputPath string) error {
 	plaintext, err := os.ReadFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read input file: %w", err)
 	}
-
 	ciphertext, err := ctx.Encrypt(plaintext)
 	if err != nil {
 		return err
 	}
-
 	if err := os.WriteFile(outputPath, ciphertext, 0644); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
-
 	return nil
 }
 
-//  дешифрует файл
 func (ctx *CipherContext) DecryptFile(inputPath, outputPath string) error {
-
 	ciphertext, err := os.ReadFile(inputPath)
 	if err != nil {
 		return fmt.Errorf("failed to read input file: %w", err)
 	}
-
 	plaintext, err := ctx.Decrypt(ciphertext)
 	if err != nil {
 		return err
 	}
-
 	if err := os.WriteFile(outputPath, plaintext, 0644); err != nil {
 		return fmt.Errorf("failed to write output file: %w", err)
 	}
-
 	return nil
 }
 
-//  шифрует файл асинхронно
 func (ctx *CipherContext) EncryptFileAsync(inputPath, outputPath string) <-chan error {
 	errChan := make(chan error, 1)
 	go func() {
@@ -183,7 +184,6 @@ func (ctx *CipherContext) EncryptFileAsync(inputPath, outputPath string) <-chan 
 	return errChan
 }
 
-// дешифрует файл асинхронно
 func (ctx *CipherContext) DecryptFileAsync(inputPath, outputPath string) <-chan error {
 	errChan := make(chan error, 1)
 	go func() {
