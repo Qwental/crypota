@@ -1,0 +1,89 @@
+# Бинарные файлы Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Тестовые бинарники
+*.test
+*.txt
+*.sh
+*.svg
+*.png
+*.gif
+*.mp3
+*.mp4
+*.pdf
+*.jpg
+
+
+
+
+
+
+
+
+
+
+# Output coverage файлы
+*.out
+*.cov
+coverage.txt
+coverage.html
+
+# Бинарник проекта
+/crypota
+/cmd/crypota/crypota
+
+# Зашифрованные и расшифрованные тестовые файлы
+testdata/encrypted_*
+testdata/decrypted_*
+testdata/*.enc
+
+# Временные файлы
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE и редакторы
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# GoLand
+/.idea/
+/shelf/
+/workspace.xml
+/httpRequests/
+/dataSources/
+/dataSources.local.xml
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Dependency directories (опционально, если используете vendor)
+# vendor/
+
+# Go workspace file
+go.work
+
+# Логи
+*.log
+
+# Переменные окружения
+.env
+.env.local
+
+# Документация (если генерируется)
+/docs/html/
+/docs/pdf/
+
+# Build директории
+/bin/
+/build/
+/dist/
