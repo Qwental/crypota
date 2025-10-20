@@ -16,7 +16,6 @@ import (
 
 func main() {
 	cleanupOldFiles()
-	fmt.Println("Используется режим CTR (Counter Mode)")
 	demonstrateDES()
 	demonstrateDEAL()
 }
@@ -34,66 +33,139 @@ func cleanupOldFiles() {
 	}
 }
 
+func shouldSkipCombination(mode modes.CipherMode, pad padding.PaddingMode) bool {
+	blockModes := []modes.CipherMode{modes.ECB, modes.CBC, modes.PCBC}
+	for _, bm := range blockModes {
+		if mode == bm && pad == padding.Zeros {
+			return true
+		}
+	}
+	return false
+}
+
 func demonstrateDES() {
-	fmt.Println("=== DES-CTR шифрование ===")
+	fmt.Println("DES")
+
+	allModes := []struct {
+		mode modes.CipherMode
+		name string
+	}{
+		{modes.ECB, "ECB"},
+		{modes.CBC, "CBC"},
+		{modes.PCBC, "PCBC"},
+		{modes.CFB, "CFB"},
+		{modes.OFB, "OFB"},
+		{modes.CTR, "CTR"},
+	}
+
+	allPaddings := []struct {
+		pad  padding.PaddingMode
+		name string
+	}{
+		{padding.PKCS7, "PKCS7"},
+		{padding.ANSIX923, "ANSI X.923"},
+		{padding.ISO10126, "ISO 10126"},
+		{padding.Zeros, "Zeros"},
+	}
 
 	key := make([]byte, 8)
 	rand.Read(key)
 
 	cipher := des.NewDESCipher()
-	iv := make([]byte, cipher.BlockSize())
-	rand.Read(iv)
 
-	ctx, err := context.NewCipherContext(
-		cipher,
-		key,
-		modes.CTR,
-		padding.PKCS7,
-		iv,
-	)
-	if err != nil {
-		log.Fatalf("не удалось создать контекст: %v", err)
+	for _, modeInfo := range allModes {
+		for _, padInfo := range allPaddings {
+			if shouldSkipCombination(modeInfo.mode, padInfo.pad) {
+				fmt.Printf("\nРежим: %s | Набивка: %s\n", modeInfo.name, padInfo.name)
+				fmt.Printf("  [SKIP] известная несовместимость\n")
+				continue
+			}
+
+			fmt.Printf("\nРежим: %s | Набивка: %s\n", modeInfo.name, padInfo.name)
+
+			var iv []byte
+			if modeInfo.mode != modes.ECB {
+				iv = make([]byte, cipher.BlockSize())
+				rand.Read(iv)
+			}
+
+			ctx, err := context.NewCipherContext(
+				cipher,
+				key,
+				modeInfo.mode,
+				padInfo.pad,
+				iv,
+			)
+			if err != nil {
+				log.Printf("  [SKIP] не удалось создать контекст: %v\n", err)
+				continue
+			}
+
+			plaintext := make([]byte, 100)
+			rand.Read(plaintext)
+
+			ciphertext, err := ctx.Encrypt(plaintext)
+			if err != nil {
+				log.Printf("  [FAIL] ошибка шифрования: %v\n", err)
+				continue
+			}
+
+			decrypted, err := ctx.Decrypt(ciphertext)
+			if err != nil {
+				log.Printf("  [FAIL] ошибка дешифрования: %v\n", err)
+				continue
+			}
+
+			if verifyData(plaintext, decrypted) {
+				fmt.Printf("  [OK] 100 байт\n")
+			} else {
+				fmt.Printf("  [FAIL] данные не совпадают\n")
+			}
+		}
 	}
 
-	testSizes := []int{100, 1024, 4096}
-	for _, size := range testSizes {
-		plaintext := make([]byte, size)
-		rand.Read(plaintext)
-
-		ciphertext, err := ctx.Encrypt(plaintext)
-		if err != nil {
-			log.Fatalf("ошибка шифрования: %v", err)
-		}
-
-		decrypted, err := ctx.Decrypt(ciphertext)
-		if err != nil {
-			log.Fatalf("ошибка дешифрования: %v", err)
-		}
-
-		if verifyData(plaintext, decrypted) {
-			fmt.Printf("  [OK] %d байт\n", size)
-		} else {
-			fmt.Printf("  [FAIL] %d байт\n", size)
-		}
-	}
-
-	fmt.Println("\nШифрование файлов через DES-CTR:")
+	fmt.Println("\n--- Шифрование файлов через DES ---")
 	testFiles := getTestFiles()
-	for _, file := range testFiles {
-		testFileEncryption(des.NewDESCipher(), key, "DES-CTR", file, modes.CTR)
+	if len(testFiles) > 0 {
+		file := testFiles[0]
+		for _, modeInfo := range allModes {
+			testFileEncryption(des.NewDESCipher(), key, fmt.Sprintf("DES-%s", modeInfo.name), file, modeInfo.mode)
+		}
 	}
 }
 
 func demonstrateDEAL() {
-	fmt.Println("\n=== DEAL-CTR шифрование ===")
+	fmt.Println("\nDEAL шифрование")
 
 	keySizes := []struct {
 		size int
 		name string
 	}{
-		{16, "DEAL-128-CTR"},
-		{24, "DEAL-192-CTR"},
-		{32, "DEAL-256-CTR"},
+		{16, "DEAL-128"},
+		{24, "DEAL-192"},
+		{32, "DEAL-256"},
+	}
+
+	allModes := []struct {
+		mode modes.CipherMode
+		name string
+	}{
+		{modes.ECB, "ECB"},
+		{modes.CBC, "CBC"},
+		{modes.PCBC, "PCBC"},
+		{modes.CFB, "CFB"},
+		{modes.OFB, "OFB"},
+		{modes.CTR, "CTR"},
+	}
+
+	allPaddings := []struct {
+		pad  padding.PaddingMode
+		name string
+	}{
+		{padding.PKCS7, "PKCS7"},
+		{padding.ANSIX923, "ANSI X.923"},
+		{padding.ISO10126, "ISO 10126"},
+		{padding.Zeros, "Zeros"},
 	}
 
 	for _, ks := range keySizes {
@@ -107,46 +179,64 @@ func demonstrateDEAL() {
 			log.Fatalf("Не удалось создать DEAL шифр: %v", err)
 		}
 
-		iv := make([]byte, cipher.BlockSize())
-		rand.Read(iv)
+		for _, modeInfo := range allModes {
+			for _, padInfo := range allPaddings {
+				if shouldSkipCombination(modeInfo.mode, padInfo.pad) {
+					fmt.Printf("\nРежим: %s | Набивка: %s\n", modeInfo.name, padInfo.name)
+					fmt.Printf("  [SKIP] известная несовместимость\n")
+					continue
+				}
 
-		ctx, err := context.NewCipherContext(
-			cipher,
-			key,
-			modes.CTR,
-			padding.PKCS7,
-			iv,
-		)
-		if err != nil {
-			log.Fatalf("не удалось создать контекст: %v", err)
+				fmt.Printf("\nРежим: %s | Набивка: %s\n", modeInfo.name, padInfo.name)
+
+				var iv []byte
+				if modeInfo.mode != modes.ECB {
+					iv = make([]byte, cipher.BlockSize())
+					rand.Read(iv)
+				}
+
+				ctx, err := context.NewCipherContext(
+					cipher,
+					key,
+					modeInfo.mode,
+					padInfo.pad,
+					iv,
+				)
+				if err != nil {
+					log.Printf("  [SKIP] не удалось создать контекст: %v\n", err)
+					continue
+				}
+
+				plaintext := make([]byte, 100)
+				rand.Read(plaintext)
+
+				ciphertext, err := ctx.Encrypt(plaintext)
+				if err != nil {
+					log.Printf("  [FAIL] ошибка шифрования: %v\n", err)
+					continue
+				}
+
+				decrypted, err := ctx.Decrypt(ciphertext)
+				if err != nil {
+					log.Printf("  [FAIL] ошибка дешифрования: %v\n", err)
+					continue
+				}
+
+				if verifyData(plaintext, decrypted) {
+					fmt.Printf("  [OK] 100 байт\n")
+				} else {
+					fmt.Printf("  [FAIL] данные не совпадают\n")
+				}
+			}
 		}
 
-		testSizes := []int{100, 1024, 4096, 16384}
-		for _, size := range testSizes {
-			plaintext := make([]byte, size)
-			rand.Read(plaintext)
-
-			ciphertext, err := ctx.Encrypt(plaintext)
-			if err != nil {
-				log.Fatalf("ошибка шифрования: %v", err)
-			}
-
-			decrypted, err := ctx.Decrypt(ciphertext)
-			if err != nil {
-				log.Fatalf("ошибка дешифрования: %v", err)
-			}
-
-			if verifyData(plaintext, decrypted) {
-				fmt.Printf("  [OK] %d байт\n", size)
-			} else {
-				fmt.Printf("  [FAIL] %d байт\n", size)
-			}
-		}
-
-		fmt.Printf("\nШифрование файлов через %s:\n", ks.name)
+		fmt.Printf("\n--- Шифрование файлов через %s ---\n", ks.name)
 		testFiles := getTestFiles()
-		for _, file := range testFiles {
-			testFileEncryption(cipher, key, ks.name, file, modes.CTR)
+		if len(testFiles) > 0 {
+			file := testFiles[0]
+			for _, modeInfo := range allModes {
+				testFileEncryption(cipher, key, fmt.Sprintf("%s-%s", ks.name, modeInfo.name), file, modeInfo.mode)
+			}
 		}
 	}
 }
@@ -184,39 +274,45 @@ func testFileEncryption(cipher interface{}, key []byte, name, inputFile string, 
 
 	switch c := cipher.(type) {
 	case *des.DESCipher:
-		iv := make([]byte, 8)
-		rand.Read(iv)
+		var iv []byte
+		if mode != modes.ECB {
+			iv = make([]byte, 8)
+			rand.Read(iv)
+		}
 		ctx, err = context.NewCipherContext(c, key, mode, padding.PKCS7, iv)
 	case *deal.DEALCipher:
-		iv := make([]byte, 16)
-		rand.Read(iv)
+		var iv []byte
+		if mode != modes.ECB {
+			iv = make([]byte, 16)
+			rand.Read(iv)
+		}
 		ctx, err = context.NewCipherContext(c, key, mode, padding.PKCS7, iv)
 	}
 
 	if err != nil {
-		log.Printf("не удалось создать контекст для %s: %v", inputFile, err)
+		log.Printf("  [SKIP] %s: %v\n", basename, err)
 		return
 	}
 
 	if err := ctx.EncryptFile(inputFile, encFile); err != nil {
-		log.Printf("не удалось зашифровать %s: %v", inputFile, err)
+		log.Printf("  [FAIL] %s: шифрование - %v\n", basename, err)
 		return
 	}
 
 	if err := ctx.DecryptFile(encFile, decFile); err != nil {
-		log.Printf("не удалось расшифровать %s: %v", inputFile, err)
+		log.Printf("  [FAIL] %s: дешифрование - %v\n", basename, err)
 		return
 	}
 
 	original, err := os.ReadFile(inputFile)
 	if err != nil {
-		log.Printf("не удалось прочитать оригинал %s: %v", inputFile, err)
+		log.Printf("  [FAIL] %s: чтение оригинала - %v\n", basename, err)
 		return
 	}
 
 	decrypted, err := os.ReadFile(decFile)
 	if err != nil {
-		log.Printf("не удалось прочитать расшифрованный %s: %v", decFile, err)
+		log.Printf("  [FAIL] %s: чтение дешифрованного - %v\n", basename, err)
 		return
 	}
 
