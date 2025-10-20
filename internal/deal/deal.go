@@ -20,7 +20,7 @@ type DEALCipher struct {
 	numRounds int
 	roundKeys [][]byte
 	desCipher interfaces.BlockCipher
-	mu        sync.RWMutex // Добавлен мьютекс для потокобезопасности
+	mu        sync.RWMutex
 }
 
 func NewDEALCipher(keySize int) (interfaces.BlockCipher, error) {
