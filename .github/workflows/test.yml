@@ -1,0 +1,38 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout код
+      uses: actions/checkout@v4
+    
+    - name: Установка Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24.x'
+    
+    - name: Проверка зависимостей
+      run: |
+        go mod download
+        go mod verify
+    
+    - name: Запуск всех тестов
+      run: go test -v ./...
+    
+    - name: Тесты DES
+      run: go test -v ./internal/des/...
+    
+    - name: Тесты DEAL
+      run: go test -v ./internal/deal/...
+    
+    - name: Сборка проекта
+      run: go build -v ./cmd/crypota/...
