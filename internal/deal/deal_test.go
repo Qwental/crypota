@@ -2,11 +2,17 @@ package deal
 
 import (
 	"bytes"
-	"testing"
+	"crypto/rand"
 	"fmt"
+	"testing"
+
+	"github.com/Qwental/crypota/internal/context"
+	"github.com/Qwental/crypota/internal/modes"
+	"github.com/Qwental/crypota/internal/padding"
 )
 
-func TestDEALBasic(t *testing.T) {
+// TestDEAL_EncryptDecrypt_RoundTrip проверяет базовый цикл шифрования-дешифрования для одного блока.
+func TestDEAL_EncryptDecrypt_RoundTrip(t *testing.T) {
 	key := make([]byte, 16)
 	for i := range key {
 		key[i] = byte(i)
@@ -19,68 +25,115 @@ func TestDEALBasic(t *testing.T) {
 
 	cipher, err := NewDEALCipher(16)
 	if err != nil {
-		t.Fatalf("NewDEALCipher failed: %v", err)
+		t.Fatalf("Не удалось создать DEAL-шифр: %v", err)
 	}
 
 	err = cipher.SetKey(key)
 	if err != nil {
-		t.Fatalf("SetKey failed: %v", err)
+		t.Fatalf("Не удалось установить ключ: %v", err)
 	}
 
 	ciphertext, err := cipher.EncryptBlock(plaintext)
 	if err != nil {
-		t.Fatalf("EncryptBlock failed: %v", err)
+		t.Fatalf("Ошибка шифрования блока: %v", err)
 	}
 
 	decrypted, err := cipher.DecryptBlock(ciphertext)
 	if err != nil {
-		t.Fatalf("DecryptBlock failed: %v", err)
+		t.Fatalf("Ошибка дешифрования блока: %v", err)
 	}
 
 	if !bytes.Equal(decrypted, plaintext) {
-		t.Errorf("Decryption failed: got %x, want %x", decrypted, plaintext)
+		t.Errorf("Дешифрование не удалось: получено %x, ожидалось %x", decrypted, plaintext)
 	}
 }
 
-// Дополнительный тест для всех размеров ключей
-func TestDEALAllKeySizes(t *testing.T) {
-	keySizes := []int{16, 24, 32}
+// TestDEAL_AllKeySizesAndModes - это комплексный тест, который проверяет все размеры ключей DEAL
+// со всеми режимами шифрования и разными размерами входных данных.
+func TestDEAL_AllKeySizesAndModes(t *testing.T) {
+	keySizes := []int{16, 24, 32} // 128, 192, 256 бит
+
+	modesToTest := []struct {
+		mode modes.CipherMode
+		name string
+	}{
+		{modes.ECB, "ECB"},
+		{modes.CBC, "CBC"},
+		{modes.PCBC, "PCBC"},
+		{modes.CFB, "CFB"},
+		{modes.OFB, "OFB"},
+		{modes.CTR, "CTR"},
+	}
+
+	// Различные размеры данных для проверки, включая некратные размеру блока
+	plaintextSizes := []int{15, 16, 32, 100, 2048}
 
 	for _, keySize := range keySizes {
-		t.Run(fmt.Sprintf("KeySize%d", keySize*8), func(t *testing.T) {
-			key := make([]byte, keySize)
-			for i := range key {
-				key[i] = byte(i)
-			}
+		t.Run(fmt.Sprintf("KeySize-%d", keySize*8), func(t *testing.T) {
+			for _, modeInfo := range modesToTest {
+				t.Run(fmt.Sprintf("Mode-%s", modeInfo.name), func(t *testing.T) {
+					for _, size := range plaintextSizes {
+						t.Run(fmt.Sprintf("Plaintext-%d-bytes", size), func(t *testing.T) {
+							// 1. Подготовка данных
+							key := make([]byte, keySize)
+							rand.Read(key)
 
-			plaintext := make([]byte, 16)
-			for i := range plaintext {
-				plaintext[i] = byte(i * 3)
-			}
+							plaintext := make([]byte, size)
+							rand.Read(plaintext)
 
-			cipher, err := NewDEALCipher(keySize)
-			if err != nil {
-				t.Fatalf("NewDEALCipher failed: %v", err)
-			}
+							// 2. Создание шифра
+							cipher, err := NewDEALCipher(keySize)
+							if err != nil {
+								t.Fatalf("Не удалось создать DEAL-шифр: %v", err)
+							}
 
-			err = cipher.SetKey(key)
-			if err != nil {
-				t.Fatalf("SetKey failed: %v", err)
-			}
+							// 3. Создание контекста шифрования
+							var iv []byte
+							if modeInfo.mode != modes.ECB {
+								iv = make([]byte, cipher.BlockSize())
+								rand.Read(iv)
+							}
 
-			ciphertext, err := cipher.EncryptBlock(plaintext)
-			if err != nil {
-				t.Fatalf("EncryptBlock failed: %v", err)
-			}
+							ctx, err := context.NewCipherContext(
+								cipher,
+								key,
+								modeInfo.mode,
+								padding.PKCS7,
+								iv,
+							)
+							if err != nil {
+								t.Fatalf("Не удалось создать контекст шифрования: %v", err)
+							}
 
-			decrypted, err := cipher.DecryptBlock(ciphertext)
-			if err != nil {
-				t.Fatalf("DecryptBlock failed: %v", err)
-			}
+							// 4. Шифрование и дешифрование
+							ciphertext, err := ctx.Encrypt(plaintext)
+							if err != nil {
+								t.Fatalf("Ошибка шифрования: %v", err)
+							}
 
-			if !bytes.Equal(decrypted, plaintext) {
-				t.Errorf("Decryption failed: got %x, want %x", decrypted, plaintext)
+							decrypted, err := ctx.Decrypt(ciphertext)
+							if err != nil {
+								t.Fatalf("Ошибка дешифрования: %v", err)
+							}
+
+							// 5. Проверка результата
+							if !bytes.Equal(decrypted, plaintext) {
+								t.Errorf("Дешифрованный текст не совпадает с исходным")
+								t.Errorf("  Исходный (%d): %x...", len(plaintext), plaintext[:min(16, len(plaintext))])
+								t.Errorf("  Полученный (%d): %x...", len(decrypted), decrypted[:min(16, len(decrypted))])
+							}
+						})
+					}
+				})
 			}
 		})
 	}
+}
+
+// Вспомогательная функция для безопасного среза
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

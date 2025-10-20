@@ -6,12 +6,15 @@ import (
 	"github.com/Qwental/crypota/internal/bitops"
 )
 
-type DESKeyScheduler struct {
-	subkeys [16]uint64
-}
+type DESKeyScheduler struct{}
 
 func NewDESKeyScheduler() *DESKeyScheduler {
 	return &DESKeyScheduler{}
+}
+
+func leftRotate28(value uint32, n int) uint32 {
+	n = n % 28
+	return ((value << n) | (value >> (28 - n))) & 0x0FFFFFFF
 }
 
 func (ks *DESKeyScheduler) GenerateRoundKeys(key []byte) ([][]byte, error) {
@@ -24,25 +27,34 @@ func (ks *DESKeyScheduler) GenerateRoundKeys(key []byte) ([][]byte, error) {
 		Numbering: bitops.OneBased,
 	}
 
-	permutedKey, err := bitops.Permute(key, PC1, config)
+	// PC-1 64 в 56 бит
+	permutedKeyBytes, err := bitops.Permute(key, PC1, config)
 	if err != nil {
 		return nil, fmt.Errorf("PC1 permutation failed: %w", err)
 	}
 
-	keyUint64 := binary.BigEndian.Uint64(append(make([]byte, 1), permutedKey...))
-	
-	C := uint32(keyUint64 >> 29)
-	D := uint32((keyUint64 >> 1) & 0x0FFFFFFF)
+	var key56bit uint64
+	paddedBytes := make([]byte, 8)
+	copy(paddedBytes[1:], permutedKeyBytes)	// Добавляем нулевой байт в начало, чтобы получилось 8 байт
 
-	leftRotations := ksRotate(C)
-	rightRotations := ksRotate(D)
+	key56bit = binary.BigEndian.Uint64(paddedBytes)
+
+	C := uint32(key56bit >> 28)
+	D := uint32(key56bit & 0x0FFFFFFF)
 
 	roundKeys := make([][]byte, 16)
 
 	for round := 0; round < 16; round++ {
-		cd := (uint64(leftRotations[round]) << 28) | uint64(rightRotations[round])
-		cdBytes := uint56ToBytes(cd)
+		C = leftRotate28(C, LeftShifts[round])
+		D = leftRotate28(D, LeftShifts[round])
 
+		cd56bit := (uint64(C) << 28) | uint64(D)
+
+		cdBytes := make([]byte, 7)
+		binary.BigEndian.PutUint64(paddedBytes, cd56bit)
+		copy(cdBytes, paddedBytes[1:])
+
+		// PC-2 56 в  48 бит
 		roundKey, err := bitops.Permute(cdBytes, PC2, config)
 		if err != nil {
 			return nil, fmt.Errorf("PC2 permutation failed in round %d: %w", round, err)
@@ -52,27 +64,4 @@ func (ks *DESKeyScheduler) GenerateRoundKeys(key []byte) ([][]byte, error) {
 	}
 
 	return roundKeys, nil
-}
-
-func ksRotate(in uint32) []uint32 {
-	out := make([]uint32, 16)
-	last := in
-
-	for i := 0; i < 16; i++ {
-		shift := LeftShifts[i]
-		left := (last << (4 + shift)) >> 4
-		right := (last << 4) >> (32 - shift)
-		out[i] = left | right
-		last = out[i]
-	}
-
-	return out
-}
-
-func uint56ToBytes(value uint64) []byte {
-	bytes := make([]byte, 7)
-	for i := 0; i < 7; i++ {
-		bytes[i] = byte(value >> (48 - i*8))
-	}
-	return bytes
 }

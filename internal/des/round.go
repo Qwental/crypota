@@ -66,7 +66,7 @@ func (rf *DESRoundFunction) Apply(block []byte, roundKey []byte) ([]byte, error)
 
 	result, err := bitops.Permute(sboxOutput, P, config)
 	if err != nil {
-		return nil, fmt.Errorf("P permutation failed: %w", err)
+		return nil, fmt.Errorf(" P permutation failed: %w", err)
 	}
 
 	return result, nil

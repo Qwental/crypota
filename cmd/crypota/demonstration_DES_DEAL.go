@@ -44,6 +44,9 @@ func demonstrateDES() {
 	}{
 		{modes.ECB, "ECB"},
 		{modes.CBC, "CBC"},
+		{modes.PCBC, "PCBC"},
+		{modes.CFB, "CFB"},
+		{modes.OFB, "OFB"},
 		{modes.CTR, "CTR"},
 	}
 
@@ -90,62 +93,102 @@ func demonstrateDES() {
 		}
 	}
 
-	fmt.Println("\nШифруем файлы через DES:")
+	fmt.Println("\nШифрование файлов через DES:")
 	testFiles := getTestFiles()
 	for _, file := range testFiles {
 		testFileEncryption(des.NewDESCipher(), key, "DES", file)
 	}
 }
 func demonstrateDEAL() {
-	fmt.Println("DEAL шифрование")
+	fmt.Println("\n=== DEAL шифрование ===")
 
-	key := make([]byte, 16)
-	rand.Read(key)
-
-	plaintext := make([]byte, 2048)
-	rand.Read(plaintext)
-
-	cipher, err := deal.NewDEALCipher(16)
-	if err != nil {
-		log.Fatalf("Не удалось создать DEAL шифр: %v", err)
+	keySizes := []struct {
+		size int
+		name string
+	}{
+		{16, "DEAL-128"},
+		{24, "DEAL-192"},
+		{32, "DEAL-256"},
 	}
 
-	iv := make([]byte, cipher.BlockSize())
-	rand.Read(iv)
-
-	ctx, err := context.NewCipherContext(
-		cipher,
-		key,
-		modes.CBC,
-		padding.PKCS7,
-		iv,
-	)
-	if err != nil {
-		log.Fatalf("не удалось создать контекст: %v", err)
+	testModes := []struct {
+		mode modes.CipherMode
+		name string
+	}{
+		{modes.ECB, "ECB"},
+		{modes.CBC, "CBC"},
+		{modes.PCBC, "PCBC"},
+		{modes.CFB, "CFB"},
+		{modes.OFB, "OFB"},
+		{modes.CTR, "CTR"},
 	}
 
-	ciphertext, err := ctx.Encrypt(plaintext)
-	if err != nil {
-		log.Fatalf("ошибка шифрования: %v", err)
-	}
-	fmt.Printf("зашифровали %d байт -> %d байт\n", len(plaintext), len(ciphertext))
+	for _, ks := range keySizes {
+		fmt.Printf("\n--- %s ---\n", ks.name)
 
-	decrypted, err := ctx.Decrypt(ciphertext)
-	if err != nil {
-		log.Fatalf("ошибка дешифрования: %v", err)
-	}
+		for _, tm := range testModes {
+			fmt.Printf("\nРежим %s:\n", tm.name)
 
-	if verifyData(plaintext, decrypted) {
-		fmt.Println("DEAL расшифровка успешна")
-	} else {
-		fmt.Println("DEAL расшифровка провалилась")
-	}
+			key := make([]byte, ks.size)
+			rand.Read(key)
 
-	fmt.Println("\nШифруем файлы через DEAL:")
-	testFiles := getTestFiles()
-	for _, file := range testFiles {
+			cipher, err := deal.NewDEALCipher(ks.size)
+			if err != nil {
+				log.Fatalf("Не удалось создать DEAL шифр: %v", err)
+			}
 
-		testFileEncryption(cipher, key, "DEAL", file)
+			plaintext := make([]byte, 2048)
+			rand.Read(plaintext)
+
+			var iv []byte
+			if tm.mode != modes.ECB {
+				iv = make([]byte, cipher.BlockSize())
+				rand.Read(iv)
+			}
+
+			ctx, err := context.NewCipherContext(
+				cipher,
+				key,
+				tm.mode,
+				padding.PKCS7,
+				iv,
+			)
+			if err != nil {
+				log.Fatalf("не удалось создать контекст: %v", err)
+			}
+
+			ciphertext, err := ctx.Encrypt(plaintext)
+			if err != nil {
+				log.Fatalf("ошибка шифрования: %v", err)
+			}
+			fmt.Printf("  зашифровали %d байт -> %d байт\n", len(plaintext), len(ciphertext))
+
+			decrypted, err := ctx.Decrypt(ciphertext)
+			if err != nil {
+				log.Fatalf("ошибка дешифрования: %v", err)
+			}
+
+			if verifyData(plaintext, decrypted) {
+				fmt.Println("  расшифровка прошла успешно")
+			} else {
+				fmt.Println("  расшифровка провалилась")
+			}
+		}
+
+		fmt.Printf("\nШифрование файлов через %s:\n", ks.name)
+
+		key := make([]byte, ks.size)
+		rand.Read(key)
+
+		cipher, err := deal.NewDEALCipher(ks.size)
+		if err != nil {
+			log.Fatalf("Не удалось создать DEAL шифр: %v", err)
+		}
+
+		testFiles := getTestFiles()
+		for _, file := range testFiles {
+			testFileEncryption(cipher, key, ks.name, file)
+		}
 	}
 }
 
@@ -219,11 +262,11 @@ func testFileEncryption(cipher interface{}, key []byte, name, inputFile string) 
 	}
 
 	if verifyData(original, decrypted) {
-		fmt.Printf("  %s: ok\n", basename)
+		fmt.Printf("  %s: успех\n", basename)
 		fmt.Printf("    enc: %s\n", encFile)
 		fmt.Printf("    dec: %s\n", decFile)
 	} else {
-		fmt.Printf("  %s: fail\n", basename)
+		fmt.Printf("  %s: провал\n", basename)
 	}
 }
 
