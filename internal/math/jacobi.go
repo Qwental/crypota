@@ -2,7 +2,7 @@ package math
 
 import "math/big"
 
-// JacobiSymbol вычисляет символ Якоби (a/n)
+// вычисляет символ Якоби (a/n)
 func JacobiSymbol(a, n *big.Int) int {
 	if n.Cmp(big.NewInt(3)) < 0 || n.Bit(0) == 0 {
 		panic("n must be an odd integer >= 3")

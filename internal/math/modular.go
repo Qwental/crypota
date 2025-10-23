@@ -2,8 +2,7 @@ package math
 
 import "math/big"
 
-// ModExp возводит в степень по модулю
-// c ≡ a^n (mod m)
+//возводит в степень по модулю c ≡ a^n (mod m)
 func ModExp(base, exp, mod *big.Int) *big.Int {
 	if mod.Cmp(big.NewInt(0)) == 0 {
 		panic("modulus cannot be zero")

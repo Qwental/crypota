@@ -2,7 +2,7 @@ package math
 
 import "math/big"
 
-// LegendreSymbol вычисляет символ Лежандра (a/p)
+// вычисляет символ Лежандра
 // (a/p) ≡ a^((p-1)/2) (mod p)
 func LegendreSymbol(a, p *big.Int) int {
 	if p.Cmp(big.NewInt(3)) < 0 || p.Bit(0) == 0 {

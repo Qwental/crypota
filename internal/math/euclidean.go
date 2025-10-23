@@ -2,7 +2,6 @@ package math
 
 import "math/big"
 
-// GCD вычисляет НОД двух чисел алгоритмом Евклида
 // gcd(a, b) = gcd(b mod a, a)
 func GCD(a, b *big.Int) *big.Int {
 	if a == nil || b == nil {
@@ -23,7 +22,6 @@ func GCD(a, b *big.Int) *big.Int {
 	return GCD(new(big.Int).Mod(b, a), a)
 }
 
-// ExtendedGCD вычисляет НОД и решает соотношение Безу
 // gcd(a, b) = a*x + b*y
 func ExtendedGCD(a, b *big.Int) (gcd, x, y *big.Int) {
 	if a.Cmp(big.NewInt(0)) == 0 {
