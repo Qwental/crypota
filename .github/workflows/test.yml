@@ -28,11 +28,23 @@ jobs:
     - name: Запуск всех тестов
       run: go test -v ./...
     
+    - name: Тесты математических функций
+      run: go test -v ./internal/math/...
+    
     - name: Тесты DES
       run: go test -v ./internal/des/...
     
     - name: Тесты DEAL
       run: go test -v ./internal/deal/...
     
+    - name: Тесты битовых операций
+      run: go test -v ./internal/bitops/...
+    
     - name: Сборка проекта
       run: go build -v ./cmd/crypota/...
+    
+    - name: Покрытие тестами
+      run: go test -coverprofile=coverage.out ./...
+    
+    - name: Показать покрытие
+      run: go tool cover -func=coverage.out
