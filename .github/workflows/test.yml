@@ -1,50 +1,30 @@
-name: Tests
+name: Go Tests
 
 on:
   push:
-    branches: [ main ]
+    branches: ["main"]
   pull_request:
-    branches: [ main ]
+    branches: ["main"]
 
 jobs:
   test:
-    name: Run Tests
+    name: Run Go Tests
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout код
-      uses: actions/checkout@v4
-    
-    - name: Установка Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24.x'
-    
-    - name: Проверка зависимостей
-      run: |
-        go mod download
-        go mod verify
-    
-    - name: Запуск всех тестов
-      run: go test -v ./...
-    
-    - name: Тесты математических функций
-      run: go test -v ./internal/math/...
-    
-    - name: Тесты DES
-      run: go test -v ./internal/des/...
-    
-    - name: Тесты DEAL
-      run: go test -v ./internal/deal/...
-    
-    - name: Тесты битовых операций
-      run: go test -v ./internal/bitops/...
-    
-    - name: Сборка проекта
-      run: go build -v ./cmd/crypota/...
-    
-    - name: Покрытие тестами
-      run: go test -coverprofile=coverage.out ./...
-    
-    - name: Показать покрытие
-      run: go tool cover -func=coverage.out
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Verify dependencies
+        run: go mod tidy && go mod verify
+
+      - name: Build project
+        run: go build -v ./...
+
+      - name: Run all tests
+        run: go test -v -race ./...

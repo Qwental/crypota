@@ -40,7 +40,7 @@ func TestWienerAttack_FailsOnSecureKey(t *testing.T) {
 	_, err = attacker.Attack(pubKey.E, pubKey.N)
 
 	if err == nil {
-		t.Fatal("КРИТИЧЕСКАЯ УЯЗВИМОСТЬ! Атака Винера прошла на защищенном ключе!")
+		t.Fatal("бляяя")
 	}
 }
 
