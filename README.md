@@ -34,6 +34,12 @@
 ## ЛР2
 ### task 2.1
 - `internal/math/*.go` - функции для вычисления символа Лежандра, Якоби, GCD, fastpow по модулю 
+### task 2.2
+- `internal/primality/*.go` - тесты простоты
+### task 2.3
+- `internal/rsa/*.go` - rsa
+### task 2.4
+- `internal/wiener/*.go` - атака Винера с использованием rsabad
 
 
 

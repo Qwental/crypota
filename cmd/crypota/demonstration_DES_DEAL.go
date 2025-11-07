@@ -17,11 +17,7 @@ import (
 
 func main() {
 	cleanupOldFiles()
-
-	fmt.Println("Тестирование режимов шифрования на одном текстовом файле")
 	testAllModesOnTextFile()
-
-	fmt.Println("\nТестирование всех типов файлов на одном режиме")
 	testAllFilesWithOneMode()
 }
 

@@ -5,7 +5,6 @@ import (
 	"testing"
 )
 
-// Простой мок раундовой функции для тестирования
 type mockRoundFunction struct{}
 
 func (m *mockRoundFunction) Apply(block []byte, key []byte) ([]byte, error) {
@@ -16,7 +15,6 @@ func (m *mockRoundFunction) Apply(block []byte, key []byte) ([]byte, error) {
 	return result, nil
 }
 
-// Простой мок генератора ключей
 type mockKeyScheduler struct{}
 
 func (m *mockKeyScheduler) GenerateRoundKeys(key []byte) ([][]byte, error) {
