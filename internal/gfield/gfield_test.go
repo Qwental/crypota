@@ -1,6 +1,7 @@
 package gfield
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -16,13 +17,11 @@ func TestAdd(t *testing.T) {
 		{"MATLAB example 1", 0x09, 0x01, 0x08},
 		{"MATLAB example 2", 0x08, 0x02, 0x0A},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := Add(tt.a, tt.b)
 			if result != tt.expected {
-				t.Errorf("Add(0x%02X, 0x%02X) = 0x%02X; want 0x%02X",
-					tt.a, tt.b, result, tt.expected)
+				t.Errorf("Add(0x%02X, 0x%02X) = 0x%02X; want 0x%02X", tt.a, tt.b, result, tt.expected)
 			}
 		})
 	}
@@ -42,13 +41,11 @@ func TestMultiplyByMod(t *testing.T) {
 		{"MATLAB mod 0xF5 test 2", 0x02, 0x02, 0xF5, 0x04},
 		{"MATLAB mod 0xF5 test 3", 0x03, 0x02, 0xF5, 0x06},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := MultiplyByMod(tt.a, tt.b, tt.mod)
 			if result != tt.expected {
-				t.Errorf("MultiplyByMod(0x%02X, 0x%02X, 0x%02X) = 0x%02X; want 0x%02X",
-					tt.a, tt.b, tt.mod, result, tt.expected)
+				t.Errorf("MultiplyByMod(0x%02X, 0x%02X, 0x%02X) = 0x%02X; want 0x%02X", tt.a, tt.b, tt.mod, result, tt.expected)
 			}
 		})
 	}
@@ -67,14 +64,12 @@ func TestInverse(t *testing.T) {
 		{"MATLAB mod 0xF5 test 2", 0x08, 0xF5},
 		{"MATLAB mod 0xF5 test 3", 0x02, 0xF5},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			inv := Inverse(tt.poly, tt.mod)
 			product := MultiplyByMod(tt.poly, inv, tt.mod)
 			if product != 0x01 {
-				t.Errorf("Inverse(0x%02X, 0x%02X) = 0x%02X; poly * inv = 0x%02X, want 0x01",
-					tt.poly, tt.mod, inv, product)
+				t.Errorf("Inverse(0x%02X, 0x%02X) = 0x%02X; poly * inv = 0x%02X, want 0x01", tt.poly, tt.mod, inv, product)
 			}
 		})
 	}
@@ -94,13 +89,11 @@ func TestIsIrreducible(t *testing.T) {
 		{"irreducible 4", 0x13, 4, true},
 		{"reducible 4", 0x10, 4, false},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := IsIrreducible(tt.poly, tt.degree)
 			if result != tt.expected {
-				t.Errorf("IsIrreducible(0x%X, %d) = %v; want %v",
-					tt.poly, tt.degree, result, tt.expected)
+				t.Errorf("IsIrreducible(0x%X, %d) = %v; want %v", tt.poly, tt.degree, result, tt.expected)
 			}
 		})
 	}
@@ -108,29 +101,23 @@ func TestIsIrreducible(t *testing.T) {
 
 func TestGetAllIrreducible8(t *testing.T) {
 	result := GetAllIrreducible8()
-
 	if len(result) != 30 {
 		t.Fatalf("GetAllIrreducible8() returned %d polynomials; want 30", len(result))
 	}
-
 	for i, poly := range result {
 		fullPoly := 0x100 | int(poly)
 		if !IsIrreducible(fullPoly, 8) {
 			t.Errorf("Polynomial #%d (0x%02X / 0x%03X) is not irreducible", i, poly, fullPoly)
 		}
 	}
-
 	expectedPolynomials := []byte{
 		0x1B, 0x1D, 0x2B, 0x2D, 0x39, 0x3F, 0x4D, 0x5F, 0x63, 0x65,
 		0x69, 0x71, 0x77, 0x7B, 0x87, 0x8B, 0x8D, 0x9F, 0xA3, 0xA9,
 		0xB1, 0xBD, 0xC3, 0xCF, 0xD7, 0xDD, 0xE7, 0xF3, 0xF5, 0xF9,
 	}
-
 	if len(result) != len(expectedPolynomials) {
-		t.Errorf("Result length %d doesn't match expected length %d",
-			len(result), len(expectedPolynomials))
+		t.Errorf("Result length %d doesn't match expected length %d", len(result), len(expectedPolynomials))
 	}
-
 	for i, expected := range expectedPolynomials {
 		found := false
 		for _, actual := range result {
@@ -143,7 +130,6 @@ func TestGetAllIrreducible8(t *testing.T) {
 			t.Errorf("Expected polynomial #%d: 0x%02X not found in result", i+1, expected)
 		}
 	}
-
 	matlabMod := byte(0xF5)
 	found := false
 	for _, poly := range result {
@@ -155,7 +141,6 @@ func TestGetAllIrreducible8(t *testing.T) {
 	if !found {
 		t.Error("MATLAB polynomial 0xF5 not found in irreducible list")
 	}
-
 	t.Logf("All 30 irreducible polynomials verified successfully")
 }
 
@@ -168,26 +153,21 @@ func TestFactorize(t *testing.T) {
 		{"test polynomial 2", 0b110110},
 		{"test polynomial 3", 0b100100},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			factors := Factorize(tt.poly)
-
 			if len(factors) == 0 {
 				t.Error("Factorize returned empty result")
 				return
 			}
-
 			product := 1
 			for _, f := range factors {
 				product = multiplyPolynomials(product, f)
 			}
-
 			if product != tt.poly {
 				t.Errorf("Product of factors = 0x%X; want 0x%X", product, tt.poly)
 				t.Logf("Factors: %v", factors)
 			}
-
 			for _, f := range factors {
 				degree := getDegreeHelper(f)
 				if degree > 0 && !IsIrreducible(f, degree) {
@@ -234,18 +214,15 @@ func TestModuloPolynomials(t *testing.T) {
 		{"no remainder", 0b1100, 0b11, 0b0},
 		{"larger polynomial", 0b11111, 0b111, 0b11},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := ModuloPolynomials(tt.a, tt.b)
 			if result != tt.expected {
-				t.Errorf("ModuloPolynomials(0b%b, 0b%b) = 0b%b; want 0b%b",
-					tt.a, tt.b, result, tt.expected)
+				t.Errorf("ModuloPolynomials(0b%b, 0b%b) = 0b%b; want 0b%b", tt.a, tt.b, result, tt.expected)
 			}
 		})
 	}
 }
-
 
 func TestDividePolynomials(t *testing.T) {
 	tests := []struct {
@@ -257,19 +234,15 @@ func TestDividePolynomials(t *testing.T) {
 		{"division 2", 0b10110, 0b101, 0b100},
 		{"exact division", 0b1111, 0b11, 0b101},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := DividePolynomials(tt.a, tt.b)
 			if result != tt.expected {
-				t.Errorf("DividePolynomials(0b%b, 0b%b) = 0b%b; want 0b%b",
-					tt.a, tt.b, result, tt.expected)
+				t.Errorf("DividePolynomials(0b%b, 0b%b) = 0b%b; want 0b%b", tt.a, tt.b, result, tt.expected)
 			}
-
 			quotient := result
 			remainder := ModuloPolynomials(tt.a, tt.b)
 			reconstructed := multiplyPolynomials(quotient, tt.b) ^ remainder
-
 			if reconstructed != tt.a {
 				t.Errorf("Verification failed: quotient * divisor + remainder != dividend")
 				t.Logf("Expected: 0b%b, Got: 0b%b", tt.a, reconstructed)
@@ -286,13 +259,11 @@ func TestAddCommutative(t *testing.T) {
 		{0xAB, 0xCD},
 		{0xFF, 0x01},
 	}
-
 	for _, tc := range testCases {
 		result1 := Add(tc.a, tc.b)
 		result2 := Add(tc.b, tc.a)
 		if result1 != result2 {
-			t.Errorf("Add is not commutative: Add(0x%02X, 0x%02X) = 0x%02X, but Add(0x%02X, 0x%02X) = 0x%02X",
-				tc.a, tc.b, result1, tc.b, tc.a, result2)
+			t.Errorf("Add is not commutative: Add(0x%02X, 0x%02X) = 0x%02X, but Add(0x%02X, 0x%02X) = 0x%02X", tc.a, tc.b, result1, tc.b, tc.a, result2)
 		}
 	}
 }
@@ -306,13 +277,146 @@ func TestMultiplyCommutative(t *testing.T) {
 		{0x53, 0xCA},
 		{0x02, 0x03},
 	}
-
 	for _, tc := range testCases {
 		result1 := MultiplyByMod(tc.a, tc.b, mod)
 		result2 := MultiplyByMod(tc.b, tc.a, mod)
 		if result1 != result2 {
-			t.Errorf("Multiply is not commutative: Multiply(0x%02X, 0x%02X, 0x%02X) = 0x%02X, but Multiply(0x%02X, 0x%02X, 0x%02X) = 0x%02X",
-				tc.a, tc.b, mod, result1, tc.b, tc.a, mod, result2)
+			t.Errorf("Multiply is not commutative: Multiply(0x%02X, 0x%02X, 0x%02X) = 0x%02X, but Multiply(0x%02X, 0x%02X, 0x%02X) = 0x%02X", tc.a, tc.b, mod, result1, tc.b, tc.a, mod, result2)
 		}
 	}
+}
+
+func TestGF256PolyAddSubAES(t *testing.T) {
+	mod := byte(0x1B)
+	_ = mod
+	A := []byte{1, 0, 2, 90, 34, 43, 21, 24, 232}
+	B := []byte{1, 0, 23, 96, 42, 123}
+	sum := polyAddGF256(A, B)
+	expectedSum := []byte{0, 0, 21, 58, 8, 80, 21, 24, 232}
+	if !equalPoly(sum, expectedSum) {
+		t.Fatalf("A(x)+B(x) mismatch: got %v, want %v", sum, expectedSum)
+	}
+	diff := polyAddGF256(A, B)
+	if !equalPoly(diff, expectedSum) {
+		t.Fatalf("A(x)-B(x) mismatch: got %v, want %v", diff, expectedSum)
+	}
+}
+
+func TestGF256PolyMulAES(t *testing.T) {
+	mod := byte(0x1B)
+	A := []byte{1, 0, 2, 90, 34, 43, 21, 24, 232}
+	B := []byte{1, 0, 23, 96, 42, 123}
+	prod := polyMulGF256(A, B, mod)
+	expected := []byte{1, 0, 21, 58, 38, 218, 125, 42, 137, 127, 78, 172, 202, 44}
+	if !equalPoly(prod, expected) {
+		t.Fatalf("A(x)*B(x) mismatch: got %v, want %v", prod, expected)
+	}
+}
+
+func TestGF256PolyDivAES(t *testing.T) {
+	mod := byte(0x1B)
+	A := []byte{1, 0, 2, 90, 34, 43, 21, 24, 232}
+	B := []byte{1, 0, 23, 96, 42, 123}
+	quot, rem := polyDivGF256(A, B, mod)
+	expectedQ := []byte{194, 43, 17, 70}
+	expectedR := []byte{195, 43, 255, 30, 129}
+	if !equalPoly(quot, expectedQ) {
+		t.Fatalf("Quotient mismatch: got %v, want %v", quot, expectedQ)
+	}
+	if !equalPoly(rem, expectedR) {
+		t.Fatalf("Remainder mismatch: got %v, want %v", rem, expectedR)
+	}
+	rebuilt := polyAddGF256(polyMulGF256(B, quot, mod), rem)
+	if !equalPoly(rebuilt, A) {
+		t.Fatalf("Verification failed: B*Q+R != A, got %v", rebuilt)
+	}
+}
+
+func trimZeros(p []byte) []byte {
+	i := len(p) - 1
+	for i >= 0 && p[i] == 0 {
+		i--
+	}
+	if i < 0 {
+		return []byte{}
+	}
+	return p[:i+1]
+}
+
+func degreeBytes(p []byte) int {
+	for i := len(p) - 1; i >= 0; i-- {
+		if p[i] != 0 {
+			return i
+		}
+	}
+	return -1
+}
+
+func polyAddGF256(a, b []byte) []byte {
+	n := len(a)
+	if len(b) > n {
+		n = len(b)
+	}
+	res := make([]byte, n)
+	for i := 0; i < n; i++ {
+		var ai, bi byte
+		if i < len(a) {
+			ai = a[i]
+		}
+		if i < len(b) {
+			bi = b[i]
+		}
+		res[i] = Add(ai, bi)
+	}
+	return trimZeros(res)
+}
+
+func polyMulGF256(a, b []byte, mod byte) []byte {
+	if len(a) == 0 || len(b) == 0 {
+		return []byte{}
+	}
+	res := make([]byte, len(a)+len(b)-1)
+	for i, ai := range a {
+		if ai == 0 {
+			continue
+		}
+		for j, bj := range b {
+			if bj == 0 {
+				continue
+			}
+			res[i+j] ^= MultiplyByMod(ai, bj, mod)
+		}
+	}
+	return trimZeros(res)
+}
+
+func polyDivGF256(dividend, divisor []byte, mod byte) ([]byte, []byte) {
+	R := append([]byte(nil), dividend...)
+	dR := degreeBytes(R)
+	dD := degreeBytes(divisor)
+	if dD < 0 {
+		panic("division by zero polynomial over GF(256)")
+	}
+	if dR < dD {
+		return []byte{0}, trimZeros(R)
+	}
+	Q := make([]byte, dR-dD+1)
+	ld := divisor[dD]
+	invLd := Inverse(ld, mod)
+	for degreeBytes(R) >= dD {
+		dR = degreeBytes(R)
+		shift := dR - dD
+		scale := MultiplyByMod(R[dR], invLd, mod)
+		Q[shift] = scale
+		for i := 0; i <= dD; i++ {
+			prod := MultiplyByMod(divisor[i], scale, mod)
+			R[i+shift] = Add(R[i+shift], prod)
+		}
+		R = trimZeros(R)
+	}
+	return trimZeros(Q), trimZeros(R)
+}
+
+func equalPoly(a, b []byte) bool {
+	return bytes.Equal(trimZeros(a), trimZeros(b))
 }
