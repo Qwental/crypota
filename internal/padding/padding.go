@@ -1,6 +1,7 @@
 package padding
 
 import (
+	"bytes"
 	"crypto/rand"
 	"fmt"
 )
@@ -20,6 +21,15 @@ func Pad(data []byte, blockSize int, mode PaddingMode) ([]byte, error) {
 	}
 
 	paddingLen := blockSize - (len(data) % blockSize)
+	if paddingLen == 0 && mode != Zeros {
+		paddingLen = blockSize
+	} else if paddingLen == blockSize && mode == Zeros {
+		return data, nil
+	}
+
+	if len(data)%blockSize == 0 && mode == Zeros {
+		return data, nil
+	}
 
 	padded := make([]byte, len(data)+paddingLen)
 	copy(padded, data)
@@ -52,6 +62,10 @@ func Unpad(data []byte, mode PaddingMode) ([]byte, error) {
 		return nil, fmt.Errorf("cannot unpad empty data")
 	}
 
+	if mode == Zeros {
+		return bytes.TrimRight(data, "\x00"), nil
+	}
+
 	paddingLen := int(data[len(data)-1])
 
 	if paddingLen == 0 || paddingLen > len(data) {
@@ -59,12 +73,6 @@ func Unpad(data []byte, mode PaddingMode) ([]byte, error) {
 	}
 
 	switch mode {
-	case Zeros:
-		i := len(data) - 1
-		for i >= 0 && data[i] == 0 {
-			i--
-		}
-		return data[:i+1], nil
 	case ANSIX923:
 		for i := len(data) - paddingLen; i < len(data)-1; i++ {
 			if data[i] != 0 {
