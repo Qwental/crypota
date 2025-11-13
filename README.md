@@ -3,25 +3,26 @@
 
 ## Бугренков Владимир М8О-311Б-23
 
+### все тесты запускаются в пайплайне, так что чекнуть можно в GitHub Actions
+
 ## ЛР1
 ### task 1.1
-- `internal/bitops/permutation.go` - функция перестановки битов с поддержкой различных правил индексирования
+- `internal/bitops/permutation.go` - функция перестановки битов 
 
 ### task 1.2
-- `internal/interfaces/cipher.go` - интерфейс BlockCipher для симметричного шифрования
-- `internal/context/context.go` - контекст выполнения криптографических операций
-- `internal/padding/padding.go` - режимы набивки (Zeros, ANSI X.923, PKCS7, ISO 10126)
-- `internal/modes/modes.go` - режимы шифрования (ECB, CBC, PCBC, CFB, OFB, CTR, Random Delta)
+- `internal/interfaces/cipher.go` - интерфейс для симметричного шифрования
+- `internal/context/context.go` - контекст выполнения крипто операций
+- `internal/padding/padding.go` - режимы набивки Zeros, ANSI X.923, PKCS7, ISO 10126
+- `internal/modes/modes.go` - режимы шифрования ECB, CBC, PCBC, CFB, OFB, CTR, Random Delta
 
 ### task 1.3
-- `internal/feistel/feistel.go` - реализация сети Фейстеля
+- `internal/feistel/feistel.go` -  сеть Фейстеля
 
 ### task 1.4
 - `internal/des/des.go` - основная реализация DES
 - `internal/des/keygen.go` - генерация раундовых ключей
 - `internal/des/round.go` - раундовая функция
 - `internal/des/tables.go` - таблицы перестановок и S-блоки
-- `internal/des/des_test.go` - тесты DES
 
 ### task 1.5 и 1.7
 - `cmd/crypota/demonstration_DES_DEAL.go` - демонстрация шифрования файлов DES + в тестах есть демонстрация работы
@@ -40,6 +41,14 @@
 - `internal/rsa/*.go` - rsa
 ### task 2.4
 - `internal/wiener/*.go` - атака Винера с использованием rsabad
+
+## ЛР3
+### task 2.1
+- `crypota/internal/gfield`  - поля Галуа
+### task 2.2
+- `crypota/internal/rijndael` - Rijndael
+### task 2.3
+- `cmd/crypota/demo_rijndael/demonstration_Rijndael.go` - демонстрация со всем всем всем
 
 
 
