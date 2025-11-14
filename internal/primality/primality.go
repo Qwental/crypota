@@ -20,16 +20,15 @@ func (b *BasePrimalityTest) IsPrime(n *big.Int, probability float64) bool {
 	if n.Cmp(big.NewInt(2)) < 0 {
 		return false
 	}
-	if n.Cmp(big.NewInt(3)) == 0 { // Добавим 3 для явности
+	if n.Cmp(big.NewInt(3)) == 0 {
 		return true
 	}
 	if n.Bit(0) == 0 {
 		return n.Cmp(big.NewInt(2)) == 0
 	}
 
-	// Для n < 4 нет смысла в вероятностных тестах
 	if n.Cmp(big.NewInt(4)) < 0 {
-		return true // 2 и 3 уже обработаны
+		return true 
 	}
 
 	k := calculateIterations(probability, b.errorChance)
@@ -51,7 +50,7 @@ func (b *BasePrimalityTest) IsPrime(n *big.Int, probability float64) bool {
 
 func calculateIterations(probability, errorChance float64) int {
 	if probability < 0.5 || probability >= 1.0 {
-		probability = 0.99 // Значение по умолчанию
+		probability = 0.99 
 	}
 
 	// k >= ln(1-p) / ln(errorChance)
